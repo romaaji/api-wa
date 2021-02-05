@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+<head>
+    <title>Whatsapp Sender API by Romadhon Aji</title>
+    <style>
+        .client {
+            border: 1px solid #ccc;
+            padding: 20px;
+            box-sizing: border-box;
+            display: inline-block;
+            margin: 10px;
+        }
+        
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <img src="https://i.ibb.co/k8mPL67/logo-1.png" alt="Romaaji" class="d-inline-block align-top">
+                <a class="btn btn-primary" href="https://github.com/romaaji" target="_blank">Github</a>
+            </a>
+        </div>
+    </nav>
+    <div class="container" id="app">
+        <h1>ABOT-Whatsapp API</h1>
+        <p>By <a href="https://romaa.uno">Romadhonaji</a></p>
+        <div class="form-group justify-content-center">
+            <label for="client-id">ID</label><br>
+            <input type="text" id="client-id" class="form-control col-md-5 " placeholder="Masukkan ID">
+            <br><br>
+            <label for="client-description">Deskripsi</label><br>
+            <textarea id="client-description" class="form-control col-md-5 " placeholder="Masukkan deskripsi"></textarea>
+            <br><br>
+            <button class="btn btn-primary">Tambah Client</button>
+        </div>
+        <hr>
+        <div class="client-container">
+            <div class="client hide">
+                <h3 class="title"></h3>
+                <p class="description"></p>
+                <img src="" alt="QR Code" id="qrcode">
+                <h3>Info Logs:</h3>
+                <ul class="logs"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script>
+        $(document).ready(function() {
+            var socket = io();
+
+            // Ketika button tambah diklik
+            $('.add-client-btn').click(function() {
+                var clientId = $('#client-id').val();
+                var clientDescription = $('#client-description').val();
+                var template = $('.client').first().clone()
+                    .removeClass('hide')
+                    .addClass(clientId);
+                template.find('.title').html(clientId);
+                template.find('.description').html(clientDescription);
+                $('.client-container').append(template);
+
+                socket.emit('create-session', {
+                    id: clientId,
+                    description: clientDescription
+                });
+            });
+
+            socket.on('init', function(data) {
+                $('.client-container .client').not(':first').remove();
+                console.log(data);
+                for (var i = 0; i < data.length; i++) {
+                    var session = data[i];
+
+                    var clientId = session.id;
+                    var clientDescription = session.description;
+                    var template = $('.client').first().clone()
+                        .removeClass('hide')
+                        .addClass(clientId);
+                    template.find('.title').html(clientId);
+                    template.find('.description').html(clientDescription);
+                    $('.client-container').append(template);
+
+                    if (session.ready) {
+                        $(`.client.${session.id} .logs`).append($('<li>').text('Whatsapp is ready!'));
+                    } else {
+                        $(`.client.${session.id} .logs`).append($('<li>').text('Connecting...'));
+                    }
+                }
+            });
+
+            socket.on('remove-session', function(id) {
+                $(`.client.${id}`).remove();
+            });
+
+            socket.on('message', function(data) {
+                $(`.client.${data.id} .logs`).append($('<li>').text(data.text));
+            });
+
+            socket.on('qr', function(data) {
+                $(`.client.${data.id} #qrcode`).attr('src', data.src);
+                $(`.client.${data.id} #qrcode`).show();
+            });
+
+            socket.on('ready', function(data) {
+                $(`.client.${data.id} #qrcode`).hide();
+            });
+
+            socket.on('authenticated', function(data) {
+                $(`.client.${data.id} #qrcode`).hide();
+            });
+        });
+    </script>
+</body>
+
+</html>
